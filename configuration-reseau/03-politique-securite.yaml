@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isolate-db-vm3
+spec:
+  podSelector:
+    matchLabels:
+      kubevirt.io/vm: vm3-serveur-backend-db
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          kubevirt.io/vm: vm2-serveur-frontend
+    ports:
+    - protocol: TCP
+      port: 3306

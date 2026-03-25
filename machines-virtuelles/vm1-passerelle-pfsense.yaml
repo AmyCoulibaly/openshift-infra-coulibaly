@@ -1,0 +1,70 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm1-passerelle-pfsense
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: vm1-passerelle-pfsense
+    spec:
+      domain:
+        cpu:
+          cores: 2
+        resources:
+          requests:
+            memory: 1Gi
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: disk-pfsense
+          - cdrom:
+              bus: sata
+            name: cdrom-pfsense-iso
+          interfaces:
+          - name: default
+            masquerade: {}
+          - name: dmz
+            bridge: {}
+          - name: lan
+            bridge: {}
+      networks:
+      - name: default
+        pod: {}
+      - name: dmz
+        multus:
+          networkName: dmz-network
+      - name: lan
+        multus:
+          networkName: lan-network
+      volumes:
+      - name: disk-pfsense
+        dataVolume:
+          name: dv-pfsense-disk
+      - name: cdrom-pfsense-iso
+        dataVolume:
+          name: dv-pfsense-iso
+  dataVolumeTemplates:
+  - metadata:
+      name: dv-pfsense-disk
+    spec:
+      pvc:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 20Gi
+      source:
+        blank: {}
+  - metadata:
+      name: dv-pfsense-iso
+    spec:
+      pvc:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 2Gi
+      source:
+        http:
+          url: "https://atxmedia.net/pfsense/pfSense-CE-2.7.2-RELEASE-amd64.iso"

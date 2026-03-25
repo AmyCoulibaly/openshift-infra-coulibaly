@@ -1,0 +1,74 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm2-serveur-frontend
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: vm2-serveur-frontend
+    spec:
+      domain:
+        cpu:
+          cores: 2
+        resources:
+          requests:
+            memory: 2Gi
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: disk-ubuntu
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - name: dmz
+            bridge: {}
+      networks:
+      - name: dmz
+        multus:
+          networkName: dmz-network
+      volumes:
+      - name: disk-ubuntu
+        dataVolume:
+          name: dv-vm2-ubuntu
+      - name: cloudinitdisk
+        cloudInitNoCloud:
+          userData: |
+            #cloud-config
+            hostname: vm2-serveur-frontend
+            users:
+              - name: ubuntu
+                sudo: ALL=(ALL) NOPASSWD:ALL
+                shell: /bin/bash
+            package_update: true
+            package_upgrade: true
+            packages:
+              - nginx
+              - nodejs
+              - npm
+              - git
+            runcmd:
+              - systemctl enable nginx
+              - systemctl start nginx
+              - npm install -g pm2
+              - mkdir -p /var/www/app
+              - echo 'const express = require("express"); const app = express(); app.get("/", (req, res) => res.send("App Web DMZ de Ndeye Amy est Active !")); app.listen(3000);' > /var/www/app/server.js
+              - cd /var/www/app && npm init -y && npm install express
+              - pm2 start /var/www/app/server.js
+              - "cat <<EOF > /etc/nginx/sites-available/default\nserver {\n    listen 80;\n    location / {\n        proxy_pass http://127.0.0.1:3000;\n    }\n}\nEOF"
+              - systemctl restart nginx
+  dataVolumeTemplates:
+  - metadata:
+      name: dv-vm2-ubuntu
+    spec:
+      pvc:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 20Gi
+      source:
+        registry:
+          url: "docker://quay.io/containerdisks/ubuntu:22.04"

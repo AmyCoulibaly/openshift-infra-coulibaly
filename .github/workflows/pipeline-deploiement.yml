@@ -24,6 +24,8 @@ jobs:
     - name: Apply Network Configurations
       run: |
         echo "Application des reseaux et politiques de securite..."
+        oc apply -f configuration-reseau/00-rbac.yaml
+        sleep 2
         oc apply -f configuration-reseau/
 
     - name: Apply Virtual Machines

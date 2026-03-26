@@ -1,0 +1,41 @@
+name: Deploy OpenShift Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Install oc CLI
+      uses: redhat-actions/oc-installer@v1
+      with:
+        oc_version: 'latest'
+
+    - name: Authenticate to OpenShift
+      run: |
+        oc login --token=${{ secrets.OC_TOKEN }} --server=${{ secrets.OC_SERVER }} --insecure-skip-tls-verify
+
+    - name: Apply Network Configurations
+      run: |
+        echo "Application des reseaux et politiques de securite..."
+        oc apply -f configuration-reseau/
+
+    - name: Apply Virtual Machines
+      run: |
+        echo "Deploiement de la Base de Donnees..."
+        oc apply -f machines-virtuelles/vm3-serveur-backend-db.yaml
+        echo "Deploiement du Serveur Web..."
+        oc apply -f machines-virtuelles/vm2-serveur-frontend.yaml
+        echo "Deploiement de la Passerelle pfSense..."
+        oc apply -f machines-virtuelles/vm1-passerelle-pfsense.yaml
+
+    - name: Verify Deployment
+      run: |
+        echo "Statut des Machines Virtuelles :"
+        oc get vm
